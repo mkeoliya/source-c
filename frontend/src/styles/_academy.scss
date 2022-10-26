@@ -1,0 +1,341 @@
+@media only screen and (max-width: 512px) {
+  .custom-hidden-xxxs {
+    display: none;
+  }
+
+  .listing-button .#{$ns}-button .#{$ns}-icon {
+    margin-right: 0px;
+  }
+}
+
+@media only screen and (max-width: 768px) {
+  .custom-hidden-xxs {
+    display: none;
+  }
+}
+
+.Academy {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 100%;
+}
+
+// Fixes excessive margins in hint notifications that contain <Markdown> elements
+.markdown-notification {
+  *:first-child {
+    margin-top: 0;
+  }
+
+  *:last-child {
+    margin-bottom: 0;
+  }
+}
+
+// Following two CSS declarations are intended to override the default monospace
+// font selected by Firefox on Windows
+.#{$ns}-code-block {
+  font-family: 'Consolas', monospace;
+}
+
+.#{$ns}-running-text {
+  pre,
+  code {
+    font-family: 'Consolas', monospace;
+  }
+}
+
+// Fix excessive margins applied by bp3-running-text style
+.md,
+.markdown-notification {
+  // Union selector on all header elements
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    margin-top: 20px;
+    margin-bottom: 10px;
+  }
+}
+
+.#{$ns}-popover-content {
+  padding: 0.4rem;
+}
+
+.#{$ns}-non-ideal-state {
+  padding-top: 0.7rem;
+
+  .#{$ns}-non-ideal-state-visual {
+    margin-bottom: 0.5rem;
+  }
+
+  .#{$ns}-non-ideal-state-title {
+    padding: 0.5rem 0 0 0;
+  }
+}
+
+.assessment-briefing {
+  padding-bottom: 0;
+
+  & .md {
+    margin-bottom: 1rem;
+
+    /* If the assessment briefing begins with a header, remove its top margin */
+    & > *:first-child {
+      margin-top: 0;
+    }
+
+    /* Remove bottom margins of the last element in the assessment briefing */
+    & > *:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+
+.Assessment {
+  color: $cadet-color-3;
+
+  .contentdisplay-content.#{$ns}-card {
+    padding: 10px 20px 10px 20px;
+
+    button.collapse-button {
+      /* To override the center-xs center alignment */
+      display: block;
+      margin: 0 0 10px 0;
+    }
+  }
+
+  .listing.#{$ns}-card {
+    margin: 0 0 1rem 0;
+  }
+
+  .listing {
+    background-color: $cadet-color-5;
+    margin: 0px;
+    padding: 0;
+    text-align: justify;
+
+    & > * {
+      overflow-wrap: break-word;
+    }
+  }
+
+  .listing-picture {
+    padding: 0;
+    position: relative;
+
+    img {
+      height: 100%;
+      width: 100%;
+      object-fit: cover;
+    }
+
+    img.cover-image-submitted {
+      filter: gray; /* IE6-9 */
+      -webkit-filter: grayscale(1); /* Google Chrome, Safari 6+ & Opera 15+ */
+      filter: grayscale(1); /* Microsoft Edge and Firefox 35+ */
+    }
+
+    /* Disable grayscale on hover */
+    img.cover-image-submitted:hover {
+      -webkit-filter: grayscale(0);
+      filter: none;
+    }
+  }
+
+  .listing-text {
+    padding: 0.5rem 0.5rem 0.5rem 1rem;
+    border: 1rem;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .listing-header {
+    margin-bottom: 0.8rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    .listing-title {
+      margin-bottom: 0;
+
+      h4 {
+        margin-top: 4px;
+      }
+    }
+
+    .listing-title-tooltip {
+      /* Space out icon tooltips */
+      margin-left: 2px;
+
+      /* Visually separate first icon tooltip from assessment title */
+      &:first-of-type {
+        margin-left: 6px;
+      }
+
+      .#{$ns}-icon {
+        vertical-align: baseline;
+      }
+    }
+  }
+
+  .listing-description {
+    flex-grow: 1;
+    flex-shrink: 0;
+    /* Creates space between the description text, buttons and title */
+    margin: 0.5rem 0rem 0.5rem 0.5rem;
+
+    & > * {
+      /* Limit height of description on smaller screens */
+      max-height: 30vh;
+      /* Add padding to visually separate scrollbar from content */
+      padding-right: 0.5rem;
+      overflow-y: auto;
+    }
+  }
+
+  .listing-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    .listing-due-date {
+      display: flex;
+      overflow-x: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      align-items: center;
+    }
+
+    .listing-due-icon {
+      margin-right: 0.4rem;
+    }
+  }
+
+  .listing-button {
+    /* Prevent <div> container collapsing and forcing button text to two lines */
+    flex-grow: 0;
+    flex-shrink: 0;
+  }
+}
+
+.betcha-dialog,
+.assessment-reset {
+  span.warning {
+    font-weight: bold;
+    color: firebrick;
+  }
+
+  div.#{$ns}-dialog-body {
+    margin: 15px 20px 15px 20px;
+  }
+
+  div.#{$ns}-dialog-footer {
+    // align the div.#{$ns}-button-group right
+    text-align: right;
+  }
+}
+
+.WorkspaceParent {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* Increase default margin of Blueprint's Divider for greater vertical spacing */
+.#{$ns}-divider {
+  margin: 12px 0 12px 0;
+}
+
+.Grid {
+  .ag-center-cols-viewport {
+    /* Fixes spurious horizontal scrollbar in grid viewport at certain widths */
+    overflow-x: inherit;
+  }
+
+  :focus {
+    /* Disable rendering blue border when a sub-component in grid is in focus */
+    outline: none;
+  }
+}
+
+.GridControls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  .#{$ns}-button {
+    & > :first-child.#{$ns}-icon {
+      /* Remove unnecessary right margin when button text is hidden */
+      margin: 0;
+    }
+
+    & > span:not(:first-child) > span {
+      margin-left: 7px;
+    }
+  }
+}
+
+.ag-grid-controls {
+  .pagination-details.pagination-details.pagination-details {
+    /* Chain selectors for increased specificity: set default cursor */
+    cursor: default;
+    font-weight: bold;
+
+    .#{$ns}-button-text {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+    }
+  }
+}
+
+.ag-header-cell.ag-header-cell.ag-header-cell {
+  /* Chain selectors for increased specificity: reduce internal padding of header cells */
+  padding-left: 0.375em;
+  padding-right: 0.375em;
+
+  .ag-header-cell-label {
+    /* Increase font size of headers; pad left to centre with filter icon */
+    font-size: 1.1em;
+    font-weight: bold;
+    justify-content: center;
+    padding-left: 1em;
+  }
+
+  &:not(.ag-header-cell-sortable) .ag-header-cell-label {
+    padding-right: 1em;
+  }
+}
+
+.ag-cell {
+  font-size: 1.1em;
+  /* Override to reduce ag-grid default padding */
+  padding-left: 0.375em !important;
+  padding-right: 0.375em !important;
+  text-align: center;
+}
+
+#filterBar {
+  width: 400px;
+}
+
+.md th,
+.md td {
+  text-align: left;
+  padding: 8px;
+}
+
+.md tr:nth-child(even) {
+  background-color: #f2f2f2;
+}
+
+.editing-textarea {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  resize: none;
+}

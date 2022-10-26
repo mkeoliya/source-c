@@ -1,0 +1,548 @@
+import { Reducer } from 'redux';
+import { Variant } from 'x-slang/dist';
+
+import { SourcecastReducer } from '../../features/sourceRecorder/sourcecast/SourcecastReducer';
+import { SET_EDITOR_READONLY } from '../../features/sourceRecorder/sourcecast/SourcecastTypes';
+import { SourcereelReducer } from '../../features/sourceRecorder/sourcereel/SourcereelReducer';
+import {
+  CodeOutput,
+  defaultWorkspaceManager,
+  ErrorOutput,
+  InterpreterOutput,
+  ResultOutput
+} from '../application/ApplicationTypes';
+import {
+  DEBUG_RESET,
+  DEBUG_RESUME,
+  END_DEBUG_PAUSE,
+  END_INTERRUPT_EXECUTION,
+  EVAL_INTERPRETER_ERROR,
+  EVAL_INTERPRETER_SUCCESS,
+  HANDLE_CONSOLE_LOG,
+  HIGHLIGHT_LINE
+} from '../application/types/InterpreterTypes';
+import { SET_EDITOR_SESSION_ID, SET_SHAREDB_CONNECTED } from '../collabEditing/CollabEditingTypes';
+import { NOTIFY_PROGRAM_EVALUATED } from '../sideContent/SideContentTypes';
+import { SourceActionType } from '../utils/ActionsHelper';
+import Constants from '../utils/Constants';
+import { createContext } from '../utils/XSlangHelper';
+import {
+  BROWSE_REPL_HISTORY_DOWN,
+  BROWSE_REPL_HISTORY_UP,
+  CHANGE_EDITOR_HEIGHT,
+  CHANGE_EDITOR_WIDTH,
+  CHANGE_EXEC_TIME,
+  CHANGE_SIDE_CONTENT_HEIGHT,
+  CHANGE_STEP_LIMIT,
+  CLEAR_REPL_INPUT,
+  CLEAR_REPL_OUTPUT,
+  CLEAR_REPL_OUTPUT_LAST,
+  EVAL_EDITOR,
+  EVAL_REPL,
+  MOVE_CURSOR,
+  REFRESH_CONTEXT,
+  SEND_REPL_INPUT_TO_OUTPUT,
+  TOGGLE_EDITOR_AUTORUN,
+  UPDATE_ACTIVE_TAB,
+  UPDATE_EDITOR_VALUE,
+  UPDATE_HAS_UNSAVED_CHANGES,
+  UPDATE_REPL_VALUE,
+  UPDATE_SUBLANGUAGE,
+  UPDATE_WORKSPACE,
+  WorkspaceLocation,
+  WorkspaceManagerState
+} from '../workspace/WorkspaceTypes';
+
+/**
+ * Takes in a IWorkspaceManagerState and maps it to a new state. The
+ * pre-conditions are that
+ *   - There exists an IWorkspaceState in the IWorkspaceManagerState of the key
+ *     `location`.
+ *   - `location` is defined (and exists) as a property 'workspaceLocation' in
+ *     the action's payload.
+ */
+export const WorkspaceReducer: Reducer<WorkspaceManagerState> = (
+  state = defaultWorkspaceManager,
+  action: SourceActionType
+) => {
+  const workspaceLocation: WorkspaceLocation = (action as any).payload
+    ? (action as any).payload.workspaceLocation
+    : 'assessment';
+  let newOutput: InterpreterOutput[];
+  let lastOutput: InterpreterOutput;
+
+  switch (workspaceLocation) {
+    case 'sourcecast':
+      const sourcecastState = SourcecastReducer(state.sourcecast, action);
+      if (sourcecastState === state.sourcecast) {
+        break;
+      }
+      return {
+        ...state,
+        sourcecast: sourcecastState
+      };
+    case 'sourcereel':
+      const sourcereelState = SourcereelReducer(state.sourcereel, action);
+      if (sourcereelState === state.sourcereel) {
+        break;
+      }
+      return {
+        ...state,
+        sourcereel: sourcereelState
+      };
+    default:
+      break;
+  }
+
+  switch (action.type) {
+    case BROWSE_REPL_HISTORY_DOWN:
+      if (state[workspaceLocation].replHistory.browseIndex === null) {
+        // Not yet started browsing history, nothing to do
+        return state;
+      } else if (state[workspaceLocation].replHistory.browseIndex !== 0) {
+        // Browsing history, and still have earlier records to show
+        const newIndex = state[workspaceLocation].replHistory.browseIndex! - 1;
+        const newReplValue = state[workspaceLocation].replHistory.records[newIndex];
+        return {
+          ...state,
+          [workspaceLocation]: {
+            ...state[workspaceLocation],
+            replValue: newReplValue,
+            replHistory: {
+              ...state[workspaceLocation].replHistory,
+              browseIndex: newIndex
+            }
+          }
+        };
+      } else {
+        // Browsing history, no earlier records to show; return replValue to
+        // the last value when user started browsing
+        const newIndex = null;
+        const newReplValue = state[workspaceLocation].replHistory.originalValue;
+        const newRecords = state[workspaceLocation].replHistory.records.slice();
+        return {
+          ...state,
+          [workspaceLocation]: {
+            ...state[workspaceLocation],
+            replValue: newReplValue,
+            replHistory: {
+              browseIndex: newIndex,
+              records: newRecords,
+              originalValue: ''
+            }
+          }
+        };
+      }
+    case BROWSE_REPL_HISTORY_UP:
+      const lastRecords = state[workspaceLocation].replHistory.records;
+      const lastIndex = state[workspaceLocation].replHistory.browseIndex;
+      if (
+        lastRecords.length === 0 ||
+        (lastIndex !== null && lastRecords[lastIndex + 1] === undefined)
+      ) {
+        // There is no more later history to show
+        return state;
+      } else if (lastIndex === null) {
+        // Not yet started browsing, initialise the index & array
+        const newIndex = 0;
+        const newRecords = lastRecords.slice();
+        const originalValue = state[workspaceLocation].replValue;
+        const newReplValue = newRecords[newIndex];
+        return {
+          ...state,
+          [workspaceLocation]: {
+            ...state[workspaceLocation],
+            replValue: newReplValue,
+            replHistory: {
+              ...state[workspaceLocation].replHistory,
+              browseIndex: newIndex,
+              records: newRecords,
+              originalValue
+            }
+          }
+        };
+      } else {
+        // Browsing history, and still have later history to show
+        const newIndex = lastIndex + 1;
+        const newReplValue = lastRecords[newIndex];
+        return {
+          ...state,
+          [workspaceLocation]: {
+            ...state[workspaceLocation],
+            replValue: newReplValue,
+            replHistory: {
+              ...state[workspaceLocation].replHistory,
+              browseIndex: newIndex
+            }
+          }
+        };
+      }
+
+    case CHANGE_EDITOR_HEIGHT:
+      return {
+        ...state,
+        [workspaceLocation]: {
+          ...state[workspaceLocation],
+          editorHeight: action.payload.height
+        }
+      };
+    case CHANGE_EDITOR_WIDTH:
+      return {
+        ...state,
+        [workspaceLocation]: {
+          ...state[workspaceLocation],
+          editorWidth:
+            (
+              parseFloat(state[workspaceLocation].editorWidth.slice(0, -1)) +
+              parseFloat(action.payload.widthChange)
+            ).toString() + '%'
+        }
+      };
+    case CHANGE_EXEC_TIME:
+      return {
+        ...state,
+        [workspaceLocation]: {
+          ...state[workspaceLocation],
+          execTime: action.payload.execTime
+        }
+      };
+    case CHANGE_SIDE_CONTENT_HEIGHT:
+      return {
+        ...state,
+        [workspaceLocation]: {
+          ...state[workspaceLocation],
+          sideContentHeight: action.payload.height
+        }
+      };
+    case CHANGE_STEP_LIMIT:
+      return {
+        ...state,
+        [workspaceLocation]: {
+          ...state[workspaceLocation],
+          stepLimit: action.payload.stepLimit
+        }
+      };
+    case CLEAR_REPL_INPUT:
+      return {
+        ...state,
+        [workspaceLocation]: {
+          ...state[workspaceLocation],
+          replValue: ''
+        }
+      };
+    case CLEAR_REPL_OUTPUT_LAST:
+      return {
+        ...state,
+        [workspaceLocation]: {
+          ...state[workspaceLocation],
+          output: state[workspaceLocation].output.slice(0, -1)
+        }
+      };
+    case CLEAR_REPL_OUTPUT:
+      return {
+        ...state,
+        [workspaceLocation]: {
+          ...state[workspaceLocation],
+          output: []
+        }
+      };
+    case SEND_REPL_INPUT_TO_OUTPUT:
+      // CodeOutput properties exist in parallel with workspaceLocation
+      newOutput = state[workspaceLocation].output.concat(action.payload as CodeOutput);
+      let newReplHistoryRecords: string[];
+      if (action.payload.value !== '') {
+        newReplHistoryRecords = [action.payload.value].concat(
+          state[workspaceLocation].replHistory.records
+        );
+      } else {
+        newReplHistoryRecords = state[workspaceLocation].replHistory.records;
+      }
+      if (newReplHistoryRecords.length > Constants.maxBrowseIndex) {
+        newReplHistoryRecords.pop();
+      }
+      return {
+        ...state,
+        [workspaceLocation]: {
+          ...state[workspaceLocation],
+          output: newOutput,
+          replHistory: {
+            ...state[workspaceLocation].replHistory,
+            records: newReplHistoryRecords
+          }
+        }
+      };
+    case HANDLE_CONSOLE_LOG:
+      /* Possible cases:
+       * (1) state[workspaceLocation].output === [], i.e. state[workspaceLocation].output[-1] === undefined
+       * (2) state[workspaceLocation].output[-1] is not RunningOutput
+       * (3) state[workspaceLocation].output[-1] is RunningOutput */
+      lastOutput = state[workspaceLocation].output.slice(-1)[0];
+      if (lastOutput === undefined || lastOutput.type !== 'running') {
+        newOutput = state[workspaceLocation].output.concat({
+          type: 'running',
+          consoleLogs: [action.payload.logString]
+        });
+      } else {
+        const updatedLastOutput = {
+          type: lastOutput.type,
+          consoleLogs: lastOutput.consoleLogs.concat(action.payload.logString)
+        };
+        newOutput = state[workspaceLocation].output.slice(0, -1).concat(updatedLastOutput);
+      }
+      return {
+        ...state,
+        [workspaceLocation]: {
+          ...state[workspaceLocation],
+          output: newOutput
+        }
+      };
+    case EVAL_EDITOR:
+      return {
+        ...state,
+        [workspaceLocation]: {
+          ...state[workspaceLocation],
+          isRunning: true,
+          isDebugging: false
+        }
+      };
+    case REFRESH_CONTEXT:
+      return {
+        ...state,
+        [workspaceLocation]: {
+          ...state[workspaceLocation],
+          context: createContext<WorkspaceLocation>(
+            [],
+            workspaceLocation,
+            Constants.defaultSourceVariant as Variant
+          )
+        }
+      };
+    case EVAL_REPL:
+      return {
+        ...state,
+        [workspaceLocation]: {
+          ...state[workspaceLocation],
+          isRunning: true
+        }
+      };
+    case EVAL_INTERPRETER_SUCCESS:
+      lastOutput = state[workspaceLocation].output.slice(-1)[0];
+      if (lastOutput !== undefined && lastOutput.type === 'running') {
+        newOutput = state[workspaceLocation].output.slice(0, -1).concat({
+          type: action.payload.type,
+          value: action.payload.value,
+          consoleLogs: lastOutput.consoleLogs
+        } as ResultOutput);
+      } else {
+        newOutput = state[workspaceLocation].output.concat({
+          type: action.payload.type,
+          value: action.payload.value,
+          consoleLogs: []
+        } as ResultOutput);
+      }
+      return {
+        ...state,
+        [workspaceLocation]: {
+          ...state[workspaceLocation],
+          output: newOutput,
+          isRunning: false,
+          breakpoints: [],
+          highlightedLines: []
+        }
+      };
+    case EVAL_INTERPRETER_ERROR:
+      lastOutput = state[workspaceLocation].output.slice(-1)[0];
+      if (lastOutput !== undefined && lastOutput.type === 'running') {
+        newOutput = state[workspaceLocation].output.slice(0, -1).concat({
+          type: action.payload.type,
+          errors: action.payload.errors,
+          consoleLogs: lastOutput.consoleLogs
+        } as ErrorOutput);
+      } else {
+        newOutput = state[workspaceLocation].output.concat({
+          type: action.payload.type,
+          errors: action.payload.errors,
+          consoleLogs: []
+        } as ErrorOutput);
+      }
+      return {
+        ...state,
+        [workspaceLocation]: {
+          ...state[workspaceLocation],
+          output: newOutput,
+          isRunning: false,
+          isDebugging: false
+        }
+      };
+    /**
+     * Called to signal the end of an interruption,
+     * i.e called after the interpreter is told to stop interruption,
+     * to cause UI changes.
+     */
+    case END_INTERRUPT_EXECUTION:
+      /**
+       * Set the isRunning property of the
+       * context to false, to ensure a re-render.
+       * Also in case the async x-slang interrupt()
+       * function does not finish interrupting before
+       * this action is called.
+       */
+      return {
+        ...state,
+        [workspaceLocation]: {
+          ...state[workspaceLocation],
+          isRunning: false,
+          isDebugging: false
+        }
+      };
+    case END_DEBUG_PAUSE:
+      return {
+        ...state,
+        [workspaceLocation]: {
+          ...state[workspaceLocation],
+          isRunning: false,
+          isDebugging: true
+        }
+      };
+    case DEBUG_RESUME:
+      return {
+        ...state,
+        [workspaceLocation]: {
+          ...state[workspaceLocation],
+          isRunning: true,
+          isDebugging: false
+        }
+      };
+    case DEBUG_RESET:
+      return {
+        ...state,
+        [workspaceLocation]: {
+          ...state[workspaceLocation],
+          isRunning: false,
+          isDebugging: false
+        }
+      };
+
+    /**
+     * Updates workspace without changing anything
+     * which has not been specified
+     */
+    case UPDATE_WORKSPACE:
+      return {
+        ...state,
+        [workspaceLocation]: {
+          ...state[workspaceLocation],
+          ...action.payload.workspaceOptions
+        }
+      };
+    case SET_EDITOR_SESSION_ID:
+      return {
+        ...state,
+        [workspaceLocation]: {
+          ...state[workspaceLocation],
+          editorSessionId: action.payload.editorSessionId
+        }
+      };
+
+    case SET_EDITOR_READONLY:
+      return {
+        ...state,
+        [workspaceLocation]: {
+          ...state[workspaceLocation],
+          editorReadonly: action.payload.editorReadonly
+        }
+      };
+    case SET_SHAREDB_CONNECTED:
+      return {
+        ...state,
+        [workspaceLocation]: {
+          ...state[workspaceLocation],
+          sharedbConnected: action.payload.connected
+        }
+      };
+    case TOGGLE_EDITOR_AUTORUN:
+      return {
+        ...state,
+        [workspaceLocation]: {
+          ...state[workspaceLocation],
+          isEditorAutorun: !state[workspaceLocation].isEditorAutorun
+        }
+      };
+    case UPDATE_ACTIVE_TAB:
+      return {
+        ...state,
+        [workspaceLocation]: {
+          ...state[workspaceLocation],
+          sideContentActiveTab: action.payload.activeTab
+        }
+      };
+    case UPDATE_EDITOR_VALUE:
+      return {
+        ...state,
+        [workspaceLocation]: {
+          ...state[workspaceLocation],
+          editorValue: action.payload.newEditorValue
+        }
+      };
+    case HIGHLIGHT_LINE:
+      return {
+        ...state,
+        [workspaceLocation]: {
+          ...state[workspaceLocation],
+          highlightedLines: action.payload.highlightedLines
+        }
+      };
+    case MOVE_CURSOR:
+      return {
+        ...state,
+        [workspaceLocation]: {
+          ...state[workspaceLocation],
+          newCursorPosition: action.payload.cursorPosition
+        }
+      };
+    case UPDATE_REPL_VALUE:
+      return {
+        ...state,
+        [workspaceLocation]: {
+          ...state[workspaceLocation],
+          replValue: action.payload.newReplValue
+        }
+      };
+    case UPDATE_HAS_UNSAVED_CHANGES:
+      return {
+        ...state,
+        [workspaceLocation]: {
+          ...state[workspaceLocation],
+          hasUnsavedChanges: action.payload.hasUnsavedChanges
+        }
+      };
+    case UPDATE_SUBLANGUAGE:
+      return {
+        ...state,
+        playground: {
+          ...state.playground,
+          context: {
+            ...state.playground.context,
+            variant: action.payload.sublang.variant
+          }
+        }
+      };
+    case NOTIFY_PROGRAM_EVALUATED:
+      return {
+        ...state,
+        [workspaceLocation]: {
+          ...state[workspaceLocation],
+          debuggerContext: {
+            ...state[workspaceLocation].debuggerContext,
+            result: action.payload.result,
+            lastDebuggerResult: action.payload.lastDebuggerResult,
+            code: action.payload.code,
+            context: action.payload.context,
+            workspaceLocation: action.payload.workspaceLocation
+          }
+        }
+      };
+    default:
+      return state;
+  }
+};
